@@ -10,8 +10,14 @@ static void destroy(struct wl_client *client, struct wl_resource *resource) {
     wl_resource_destroy(resource);
 }
 
-static void attach(struct wl_client *client, struct wl_resource *resource, struct wl_resource *buffer_resource, int32_t x, int32_t y) {
+static void attach(struct wl_client* client, struct wl_resource* resource, struct wl_resource* buffer_resource, int32_t x, int32_t y) {
+    struct surface* surface = wl_resource_get_user_data(resource);
+
     fprintf(stderr, "surface.c: attach()\n");
+    if (surface->buffer_resource) {
+        fprintf(stderr, "surface.c: attach(): buffer_resource already attached\n");
+    }
+    surface->buffer_resource = buffer_resource;
 }
 
 static void damage(struct wl_client *client, struct wl_resource *resource, int32_t x, int32_t y, int32_t width, int32_t height) {

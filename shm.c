@@ -35,6 +35,13 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
+    fprintf(stderr, "shm.c: shm_create_buffer(details):\n");
+    fprintf(stderr, "shm.c: pool->size: %d\n", pool->size);
+    fprintf(stderr, "shm.c:     offset: %d\n", offset);
+    fprintf(stderr, "shm.c:      width: %d\n", width);
+    fprintf(stderr, "shm.c:     height: %d\n", height);
+    fprintf(stderr, "shm.c:     stride: %d\n", stride);
+    fprintf(stderr, "shm.c:     format: %d\n", format);
     //object.ptr = (void*)((uintptr_t)pool->data + offset);
     //buffer = wld_import_buffer(swc.shm->context, WLD_OBJECT_DATA, object, width, height, format_shm_to_wld(format), stride);
 

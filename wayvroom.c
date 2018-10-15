@@ -15,7 +15,7 @@ struct wvr_server {
     struct wl_event_loop* wl_event_loop;
 };
 
-int main(int argc, char **argv) {
+void* run_module(void* data) {
     struct wvr_server server;
 
     server.wl_display = wl_display_create();
@@ -37,5 +37,5 @@ int main(int argc, char **argv) {
     wl_display_run(server.wl_display);
     wl_display_destroy(server.wl_display);
 
-    return 0;
+    return NULL;
 }

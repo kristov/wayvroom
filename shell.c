@@ -14,6 +14,7 @@ static void get_shell_surface(struct wl_client *client, struct wl_resource *reso
     struct surface *surface = wl_resource_get_user_data(surface_resource);
     struct shell_surface *shell_surface;
 
+    fprintf(stderr, "shell.c: get_shell_surface()\n");
     shell_surface = shell_surface_new(client, wl_resource_get_version(resource), id, surface);
 
     if (!shell_surface)
@@ -27,6 +28,7 @@ static const struct wl_shell_interface shell_implementation = {
 static void bind_shell(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
     struct wl_resource *resource;
 
+    fprintf(stderr, "shell.c: bind_shell()\n");
     if (version > 1)
         version = 1;
 
