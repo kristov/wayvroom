@@ -3,6 +3,7 @@
 #include <wayland-server.h>
 #include <stdbool.h>
 
+#include "shell.h"
 #include "surface.h"
 #include "shell_surface.h"
 
@@ -36,8 +37,8 @@ static void bind_shell(struct wl_client *client, void *data, uint32_t version, u
     wl_resource_set_implementation(resource, &shell_implementation, NULL, NULL);
 }
 
-bool shell_initialize(struct wl_display* wl_display) {
+bool shell_initialize(wayvroom_server_t* server) {
     fprintf(stderr, "shell.c: shell_initialize()\n");
-    shell.global = wl_global_create(wl_display, &wl_shell_interface, 1, NULL, &bind_shell);
+    shell.global = wl_global_create(server->wl_display, &wl_shell_interface, 1, NULL, &bind_shell);
     return shell.global;
 }

@@ -3,6 +3,7 @@
 #include <wayland-server.h>
 #include <stdbool.h>
 
+#include "compositor.h"
 #include "surface.h"
 
 static struct {
@@ -53,12 +54,12 @@ static void bind_compositor(struct wl_client *client, void *data, uint32_t versi
 	wl_resource_set_implementation(resource, &compositor_implementation, NULL, NULL);
 }
 
-bool compositor_initialize(struct wl_display* wl_display) {
+bool compositor_initialize(wayvroom_server_t* server) {
     //struct screen *screen;
     //uint32_t keysym;
 
 	fprintf(stderr, "compositor.c: compositor_initialize()\n");
-    compositor.global = wl_global_create(wl_display, &wl_compositor_interface, 3, NULL, &bind_compositor);
+    compositor.global = wl_global_create(server->wl_display, &wl_compositor_interface, 3, NULL, &bind_compositor);
 
     if (!compositor.global) {
         return false;

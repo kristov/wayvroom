@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#include "wayvroom.h"
 #include "wayland_buffer.h"
 
 static struct {
@@ -162,9 +163,9 @@ static void shm_bind_shm(struct wl_client *client, void *data, uint32_t version,
     wl_shm_send_format(resource, WL_SHM_FORMAT_ARGB8888);
 }
 
-bool shm_initialize(struct wl_display* wl_display) {
+bool shm_initialize(wayvroom_server_t* server) {
     fprintf(stderr, "shm.c: shm_initialize()\n");
-    shm.global = wl_global_create(wl_display, &wl_shm_interface, 1, NULL, &shm_bind_shm);
+    shm.global = wl_global_create(server->wl_display, &wl_shm_interface, 1, NULL, &shm_bind_shm);
 
     if (!shm.global)
         return false;

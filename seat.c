@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "seat.h"
+
 static struct {
 	char *name;
 	struct wl_global *global;
@@ -48,14 +50,14 @@ static void bind_seat(struct wl_client *client, void *data, uint32_t version, ui
 	//wl_seat_send_capabilities(resource, seat.capabilities);
 }
 
-bool seat_initialize(struct wl_display* wl_display, const char *seat_name) {
+bool seat_initialize(wayvroom_server_t* server, const char *seat_name) {
     fprintf(stderr, "seat.c: seat_initialize()\n");
 
 	if (!(seat.name = strdup(seat_name))) {
 		return false;
 	}
 
-	seat.global = wl_global_create(wl_display, &wl_seat_interface, 4, NULL, &bind_seat);
+	seat.global = wl_global_create(server->wl_display, &wl_seat_interface, 4, NULL, &bind_seat);
 
 	if (!seat.global)
 		return false;

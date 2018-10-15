@@ -5,18 +5,21 @@
 #include <wayland-server.h>
 #include <stdbool.h>
 
+#include "wayvroom.h"
 #include "shm.h"
 #include "compositor.h"
 #include "shell.h"
 #include "seat.h"
 
-struct wvr_server {
-    struct wl_display* wl_display;
-    struct wl_event_loop* wl_event_loop;
-};
+#include "vrms_runtime.h"
 
-void* run_module(void* data) {
-    struct wvr_server server;
+#include <unistd.h> // sleep() - remove when not needed
+
+void* run_module(vrms_runtime_t* vrms_runtime) {
+    wayvroom_server_t server;
+
+    server.vrms_runtime = vrms_runtime;
+    server.scene_id = vrms_runtime_create_scene(vrms_runtime, "wayvroom");
 
     server.wl_display = wl_display_create();
     assert(server.wl_display);
@@ -26,10 +29,10 @@ void* run_module(void* data) {
     const char *socket = wl_display_add_socket_auto(server.wl_display);
     assert(socket);
 
-    shm_initialize(server.wl_display);
-    compositor_initialize(server.wl_display);
-    shell_initialize(server.wl_display);
-    seat_initialize(server.wl_display, "Test 123");
+    shm_initialize(&server);
+    compositor_initialize(&server);
+    shell_initialize(&server);
+    seat_initialize(&server, "Wayvroom Seat");
 
     printf("Running compositor on wayland display '%s'\n", socket);
     setenv("WAYLAND_DISPLAY", socket, true);
