@@ -10,31 +10,46 @@
 #include "wayvroom.h"
 #include "wayland_buffer.h"
 
+#include "vrms_runtime.h"
+
 static struct {
     struct wl_global *global;
 } shm;
 
 struct pool {
+    wayvroom_server_t* server;
     struct wl_resource *resource;
     void* data;
     uint32_t size;
     unsigned references;
+    uint32_t memory_id;
 };
 
-struct pool_reference {
+struct buffer_reference {
     struct pool* pool;
+    uint32_t data_id;
+    uint32_t texture_id;
 };
 
 static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t format) {
     struct pool* pool = wl_resource_get_user_data(resource);
-    struct pool_reference* reference;
+    struct buffer_reference* reference;
     struct wl_resource* buffer_resource;
+    wayvroom_server_t* server;
+    uint32_t data_id;
+    uint32_t texture_id;
+    uint32_t memory_offset;
+    uint32_t memory_length;
+    uint32_t item_length;
+    uint32_t data_length;
 
     fprintf(stderr, "shm.c: shm_create_buffer(id:%d)\n", id);
     if (offset > pool->size || offset < 0) {
         wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_STRIDE, "offset is too big or negative");
         return;
     }
+
+    server = pool->server;
 
     fprintf(stderr, "shm.c: shm_create_buffer(details):\n");
     fprintf(stderr, "shm.c: pool->size: %d\n", pool->size);
@@ -43,15 +58,20 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     fprintf(stderr, "shm.c:     height: %d\n", height);
     fprintf(stderr, "shm.c:     stride: %d\n", stride);
     fprintf(stderr, "shm.c:     format: %d\n", format);
-    //object.ptr = (void*)((uintptr_t)pool->data + offset);
-    //buffer = wld_import_buffer(swc.shm->context, WLD_OBJECT_DATA, object, width, height, format_shm_to_wld(format), stride);
+
+    memory_length = height * stride;
+    memory_offset = pool->size - memory_length;
+    item_length = stride / width;  // probably wrong
+    data_length = height * stride; // probably wrong
 
     buffer_resource = wayland_buffer_create_resource(client, wl_resource_get_version(resource), id);
-
     if (!buffer_resource) {
         wl_resource_post_no_memory(resource);
         return;
     }
+
+    data_id = vrms_runtime_create_object_data(server->vrms_runtime, server->scene_id, pool->memory_id, memory_offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    texture_id = vrms_runtime_create_object_texture(server->vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
 
     if (!(reference = malloc(sizeof(*reference)))) {
         wl_resource_destroy(buffer_resource);
@@ -59,7 +79,11 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
+    reference->data_id = data_id;
+    reference->texture_id = texture_id;
     reference->pool = pool;
+
+    wl_resource_set_user_data(buffer_resource, reference);
     //reference->destructor.destroy = &handle_buffer_destroy;
     //wld_buffer_add_destructor(buffer, &reference->destructor);
     ++pool->references;
@@ -100,7 +124,7 @@ static void shm_pool_unref(struct pool *pool) {
     if (--pool->references > 0)
         return;
 
-    munmap(pool->data, pool->size);
+    // vrms_runtime_destroy_memory(...);
     free(pool);
 }
 
@@ -111,7 +135,9 @@ static void shm_pool_resource_destroy(struct wl_resource *resource) {
 }
 
 static void shm_pool_create(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t fd, int32_t size) {
-    struct pool *pool;
+    struct pool* pool;
+    uint32_t memory_id;
+    wayvroom_server_t* server;
 
     fprintf(stderr, "shm.c: shm_pool_create()\n");
     if (!(pool = malloc(sizeof(*pool)))) {
@@ -128,11 +154,16 @@ static void shm_pool_create(struct wl_client *client, struct wl_resource *resour
         return;
     }
 
+    server = wl_resource_get_user_data(resource);
+    pool->server = server;
+
     wl_resource_set_implementation(pool->resource, &shm_pool_implementation, pool, &shm_pool_resource_destroy);
-    pool->data = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-    if (pool->data == MAP_FAILED) {
-        fprintf(stderr, "shm.c: shm_create_pool() [mmap failed]\n");
-        wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_FD, "mmap failed: %s", strerror(errno));
+
+    memory_id = vrms_runtime_create_memory(server->vrms_runtime, server->scene_id, fd, size);
+
+    if (memory_id == 0) {
+        fprintf(stderr, "shm.c: shm_create_pool() [vrms_runtime_create_memory failed]\n");
+        wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_FD, "vrms_runtime_create_memory failed: %s", strerror(errno));
         wl_resource_destroy(pool->resource);
         free(pool);
         close(fd);
@@ -142,6 +173,7 @@ static void shm_pool_create(struct wl_client *client, struct wl_resource *resour
     close(fd);
     pool->size = size;
     pool->references = 1;
+    pool->memory_id = memory_id;
     return;
 }
 
@@ -151,13 +183,16 @@ static struct wl_shm_interface shm_implementation = {
 
 static void shm_bind_shm(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
     struct wl_resource *resource;
+    wayvroom_server_t* server;
 
     fprintf(stderr, "shm.c: shm_bind_shm()\n");
     if (version > 1)
         version = 1;
 
+    server = (wayvroom_server_t*)data;
+
     resource = wl_resource_create(client, &wl_shm_interface, version, id);
-    wl_resource_set_implementation(resource, &shm_implementation, NULL, NULL);
+    wl_resource_set_implementation(resource, &shm_implementation, server, NULL);
 
     wl_shm_send_format(resource, WL_SHM_FORMAT_XRGB8888);
     wl_shm_send_format(resource, WL_SHM_FORMAT_ARGB8888);
@@ -165,7 +200,7 @@ static void shm_bind_shm(struct wl_client *client, void *data, uint32_t version,
 
 bool shm_initialize(wayvroom_server_t* server) {
     fprintf(stderr, "shm.c: shm_initialize()\n");
-    shm.global = wl_global_create(server->wl_display, &wl_shm_interface, 1, NULL, &shm_bind_shm);
+    shm.global = wl_global_create(server->wl_display, &wl_shm_interface, 1, server, &shm_bind_shm);
 
     if (!shm.global)
         return false;
