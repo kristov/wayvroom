@@ -16,13 +16,13 @@ static struct {
 
 struct pool {
     struct wl_resource *resource;
-    void *data;
+    void* data;
     uint32_t size;
     unsigned references;
 };
 
 struct pool_reference {
-    struct pool *pool;
+    struct pool* pool;
 };
 
 static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t format) {
@@ -95,8 +95,8 @@ static struct wl_shm_pool_interface shm_pool_implementation = {
     .resize = shm_resize,
 };
 
-static void shm_unref_pool(struct pool *pool) {
-    fprintf(stderr, "shm.c: shm_unref_pool()\n");
+static void shm_pool_unref(struct pool *pool) {
+    fprintf(stderr, "shm.c: shm_pool_unref()\n");
     if (--pool->references > 0)
         return;
 
@@ -104,16 +104,16 @@ static void shm_unref_pool(struct pool *pool) {
     free(pool);
 }
 
-static void shm_destroy_pool_resource(struct wl_resource *resource) {
+static void shm_pool_resource_destroy(struct wl_resource *resource) {
     struct pool *pool = wl_resource_get_user_data(resource);
-    fprintf(stderr, "shm.c: shm_destroy_pool_resource()\n");
-    shm_unref_pool(pool);
+    fprintf(stderr, "shm.c: shm_pool_resource_destroy()\n");
+    shm_pool_unref(pool);
 }
 
-static void shm_create_pool(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t fd, int32_t size) {
+static void shm_pool_create(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t fd, int32_t size) {
     struct pool *pool;
 
-    fprintf(stderr, "shm.c: shm_create_pool()\n");
+    fprintf(stderr, "shm.c: shm_pool_create()\n");
     if (!(pool = malloc(sizeof(*pool)))) {
         wl_resource_post_no_memory(resource);
         close(fd);
@@ -128,7 +128,7 @@ static void shm_create_pool(struct wl_client *client, struct wl_resource *resour
         return;
     }
 
-    wl_resource_set_implementation(pool->resource, &shm_pool_implementation, pool, &shm_destroy_pool_resource);
+    wl_resource_set_implementation(pool->resource, &shm_pool_implementation, pool, &shm_pool_resource_destroy);
     pool->data = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     if (pool->data == MAP_FAILED) {
         fprintf(stderr, "shm.c: shm_create_pool() [mmap failed]\n");
@@ -146,7 +146,7 @@ static void shm_create_pool(struct wl_client *client, struct wl_resource *resour
 }
 
 static struct wl_shm_interface shm_implementation = {
-    .create_pool = &shm_create_pool
+    .create_pool = &shm_pool_create
 };
 
 static void shm_bind_shm(struct wl_client *client, void *data, uint32_t version, uint32_t id) {
