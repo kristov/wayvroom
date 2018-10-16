@@ -38,7 +38,6 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     wayvroom_server_t* server;
     uint32_t data_id;
     uint32_t texture_id;
-    uint32_t memory_offset;
     uint32_t memory_length;
     uint32_t item_length;
     uint32_t data_length;
@@ -60,7 +59,6 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     fprintf(stderr, "shm.c:     format: %d\n", format);
 
     memory_length = height * stride;
-    memory_offset = pool->size - memory_length;
     item_length = stride / width;  // probably wrong
     data_length = height * stride; // probably wrong
 
@@ -70,7 +68,7 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
-    data_id = vrms_runtime_create_object_data(server->vrms_runtime, server->scene_id, pool->memory_id, memory_offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    data_id = vrms_runtime_create_object_data(server->vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
     texture_id = vrms_runtime_create_object_texture(server->vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
 
     if (!(reference = malloc(sizeof(*reference)))) {
