@@ -14,6 +14,7 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     struct surface* surface = wl_resource_get_user_data(resource);
     //buffer_reference = wl_resource_get_user_data(buffer_resource);
     //buffer_reference->texture_id
+    //buffer_reference->server
 
     //create vertex_id, normal_id, index_id
     //vrms_runtime_create_object_geometry();

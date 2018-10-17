@@ -26,12 +26,13 @@ struct pool {
 };
 
 struct buffer_reference {
+    wayvroom_server_t* server;
     struct pool* pool;
     uint32_t data_id;
     uint32_t texture_id;
 };
 
-static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t format) {
+static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t wl_format) {
     struct pool* pool = wl_resource_get_user_data(resource);
     struct buffer_reference* reference;
     struct wl_resource* buffer_resource;
@@ -41,6 +42,7 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     uint32_t memory_length;
     uint32_t item_length;
     uint32_t data_length;
+    vrms_texture_format_t format;
 
     fprintf(stderr, "shm.c: shm_create_buffer(id:%d)\n", id);
     if (offset > pool->size || offset < 0) {
@@ -56,11 +58,24 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     fprintf(stderr, "shm.c:      width: %d\n", width);
     fprintf(stderr, "shm.c:     height: %d\n", height);
     fprintf(stderr, "shm.c:     stride: %d\n", stride);
-    fprintf(stderr, "shm.c:     format: %d\n", format);
+    fprintf(stderr, "shm.c:  wl_format: %d\n", wl_format);
 
     memory_length = height * stride;
-    item_length = stride / width;  // probably wrong
-    data_length = height * stride; // probably wrong
+    item_length = stride / width;
+    data_length = item_length / 4;
+
+    switch (wl_format) {
+        case WL_SHM_FORMAT_XRGB8888:
+            format = VRMS_RGB8;
+            break;
+        case WL_SHM_FORMAT_ARGB8888:
+            format = VRMS_RGB8;
+            break;
+        default:
+            wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_FORMAT, "only WL_SHM_FORMAT_XRGB8888 supported");
+            return;
+            break;
+    }
 
     buffer_resource = wayland_buffer_create_resource(client, wl_resource_get_version(resource), id);
     if (!buffer_resource) {
@@ -77,6 +92,7 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
+    reference->server = server;
     reference->data_id = data_id;
     reference->texture_id = texture_id;
     reference->pool = pool;
