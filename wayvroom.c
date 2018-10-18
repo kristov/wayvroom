@@ -13,8 +13,6 @@
 
 #include "vrms_runtime.h"
 
-#include <unistd.h> // sleep() - remove when not needed
-
 void* run_module(vrms_runtime_t* vrms_runtime) {
     wayvroom_server_t server;
 
