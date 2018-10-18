@@ -10,6 +10,8 @@
 #include "wayvroom.h"
 #include "wayland_buffer.h"
 
+#include "shm.h"
+
 #include "vrms_runtime.h"
 
 static struct {
@@ -25,16 +27,9 @@ struct pool {
     uint32_t memory_id;
 };
 
-struct buffer_reference {
-    wayvroom_server_t* server;
-    struct pool* pool;
-    uint32_t data_id;
-    uint32_t texture_id;
-};
-
 static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t wl_format) {
     struct pool* pool = wl_resource_get_user_data(resource);
-    struct buffer_reference* reference;
+    buffer_reference_t* reference;
     struct wl_resource* buffer_resource;
     wayvroom_server_t* server;
     uint32_t data_id;

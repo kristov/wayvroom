@@ -3,6 +3,7 @@
 #include <wayland-server.h>
 #include <stdbool.h>
 
+#include "shm.h"
 #include "surface.h"
 
 static void surface_destroy(struct wl_client *client, struct wl_resource *resource) {
@@ -12,9 +13,9 @@ static void surface_destroy(struct wl_client *client, struct wl_resource *resour
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource, struct wl_resource* buffer_resource, int32_t x, int32_t y) {
     struct surface* surface = wl_resource_get_user_data(resource);
-    //buffer_reference = wl_resource_get_user_data(buffer_resource);
-    //buffer_reference->texture_id
-    //buffer_reference->server
+    //buffer_reference_t* reference = wl_resource_get_user_data(buffer_resource);
+    //reference->texture_id
+    //reference->server
 
     //create vertex_id, normal_id, index_id
     //vrms_runtime_create_object_geometry();
