@@ -14,6 +14,9 @@ static void surface_destroy(struct wl_client *client, struct wl_resource *resour
 static void surface_attach(struct wl_client* client, struct wl_resource* resource, struct wl_resource* buffer_resource, int32_t x, int32_t y) {
     struct surface* surface = wl_resource_get_user_data(resource);
     //buffer_reference_t* reference = wl_resource_get_user_data(buffer_resource);
+
+    //reference->width
+    //reference->height
     //reference->texture_id
     //reference->server
 

@@ -32,6 +32,7 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     buffer_reference_t* reference;
     struct wl_resource* buffer_resource;
     wayvroom_server_t* server;
+    vrms_runtime_t* vrms_runtime;
     uint32_t data_id;
     uint32_t texture_id;
     uint32_t memory_length;
@@ -46,6 +47,7 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     }
 
     server = pool->server;
+    vrms_runtime = server->vrms_runtime;
 
     fprintf(stderr, "shm.c: shm_create_buffer(details):\n");
     fprintf(stderr, "shm.c: pool->size: %d\n", pool->size);
@@ -78,8 +80,8 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
-    data_id = vrms_runtime_create_object_data(server->vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
-    texture_id = vrms_runtime_create_object_texture(server->vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
+    data_id = vrms_runtime->interface->create_object_data(vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    texture_id = vrms_runtime->interface->create_object_texture(vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
 
     if (!(reference = malloc(sizeof(*reference)))) {
         wl_resource_destroy(buffer_resource);
@@ -91,6 +93,8 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     reference->data_id = data_id;
     reference->texture_id = texture_id;
     reference->pool = pool;
+    reference->width = width;
+    reference->height = height;
 
     wl_resource_set_user_data(buffer_resource, reference);
     //reference->destructor.destroy = &handle_buffer_destroy;
