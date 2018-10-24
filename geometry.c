@@ -240,12 +240,12 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     offset += sizeof(uint32_t) * 8;
     item = &layout->items[5];
     item->memory_offset = offset;
-    item->memory_size = sizeof(uint8_t) * 8;
+    item->memory_size = sizeof(uint8_t) * 10;
     item->item_length = sizeof(uint8_t);
     item->data_length = sizeof(uint8_t);
     item->type = VRMS_PROGRAM;
 
-    offset += sizeof(uint8_t) * 8;
+    offset += sizeof(uint8_t) * 10;
     item = &layout->items[6];
     item->memory_offset = offset;
     item->memory_size = sizeof(float) * 16;
@@ -255,13 +255,13 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
 
     geometry_realise_memory(vrms_runtime, scene_id, layout);
 
-    verts = (float*)&layout->mem[layout->items[0].memory_offset];
-    norms = (float*)&layout->mem[layout->items[1].memory_offset];
-    indicies = (uint16_t*)&layout->mem[layout->items[2].memory_offset];
-    uvs = (float*)&layout->mem[layout->items[3].memory_offset];
-    registers = (uint32_t*)&layout->mem[layout->items[4].memory_offset];
-    program = (uint8_t*)&layout->mem[layout->items[5].memory_offset];
-    matrix = (float*)&layout->mem[layout->items[6].memory_offset];
+    verts = &((float*)layout->mem)[layout->items[0].memory_offset];
+    norms = &((float*)layout->mem)[layout->items[1].memory_offset];
+    indicies = &((uint16_t*)layout->mem)[layout->items[2].memory_offset];
+    uvs = &((float*)layout->mem)[layout->items[3].memory_offset];
+    registers = &((uint32_t*)layout->mem)[layout->items[4].memory_offset];
+    program = &((uint8_t*)layout->mem)[layout->items[5].memory_offset];
+    matrix = &((float*)layout->mem)[layout->items[6].memory_offset];
 
     std_plane_generate_verticies(verts, x_min, y_min, x_max, y_max);
     std_plane_generate_normals(norms);
@@ -280,6 +280,8 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     program[5] = VM_REG0;
     program[6] = VM_REG0;
     program[7] = VM_FRWAIT;
+    program[8] = VM_JMP;
+    program[9] = 0x04;
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[5]);
 
     esmLoadIdentity(matrix);
