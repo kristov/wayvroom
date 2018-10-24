@@ -23,9 +23,8 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     server = reference->server;
     vrms_runtime = server->vrms_runtime;
 
-    object = geometry_plane_create(vrms_runtime, server->scene_id, reference->width, reference->height);
-
-    vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, server->scene_id, object->geometry_id, reference->texture_id, object->uv_id);
+    object = geometry_create_screen(vrms_runtime, server->scene_id, reference->texture_id, reference->width, reference->height);
+    reference->mesh_id = object->mesh_id;
 
     fprintf(stderr, "surface.c: surface_attach()\n");
     if (surface->buffer_resource) {

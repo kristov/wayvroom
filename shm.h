@@ -10,6 +10,7 @@ typedef struct buffer_reference {
     uint32_t texture_id;
     uint32_t width;
     uint32_t height;
+    uint32_t mesh_id;
 } buffer_reference_t;
 
 bool shm_initialize(wayvroom_server_t* server);
