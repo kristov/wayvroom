@@ -6,6 +6,8 @@
 #include "shm.h"
 #include "surface.h"
 
+#include "geometry.h"
+
 static void surface_destroy(struct wl_client *client, struct wl_resource *resource) {
     fprintf(stderr, "surface.c: surface_destroy()\n");
     wl_resource_destroy(resource);
@@ -13,16 +15,17 @@ static void surface_destroy(struct wl_client *client, struct wl_resource *resour
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource, struct wl_resource* buffer_resource, int32_t x, int32_t y) {
     struct surface* surface = wl_resource_get_user_data(resource);
-    //buffer_reference_t* reference = wl_resource_get_user_data(buffer_resource);
+    buffer_reference_t* reference = wl_resource_get_user_data(buffer_resource);
+    wayvroom_server_t* server;
+    vrms_runtime_t* vrms_runtime;
+    geometry_object_t* object;
 
-    //reference->width
-    //reference->height
-    //reference->texture_id
-    //reference->server
+    server = reference->server;
+    vrms_runtime = server->vrms_runtime;
 
-    //create vertex_id, normal_id, index_id
-    //vrms_runtime_create_object_geometry();
-    //vrms_runtime_create_object_mesh_texture();
+    object = geometry_plane_create(vrms_runtime, server->scene_id, reference->width, reference->height);
+
+    vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, server->scene_id, object->geometry_id, reference->texture_id, object->uv_id);
 
     fprintf(stderr, "surface.c: surface_attach()\n");
     if (surface->buffer_resource) {

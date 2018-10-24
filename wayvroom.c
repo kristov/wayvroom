@@ -17,7 +17,7 @@ void* run_module(vrms_runtime_t* vrms_runtime) {
     wayvroom_server_t server;
 
     server.vrms_runtime = vrms_runtime;
-    server.scene_id = vrms_runtime_create_scene(vrms_runtime, "wayvroom");
+    server.scene_id = vrms_runtime->interface->create_scene(vrms_runtime, "wayvroom");
 
     server.wl_display = wl_display_create();
     assert(server.wl_display);

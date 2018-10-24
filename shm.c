@@ -151,6 +151,7 @@ static void shm_pool_create(struct wl_client *client, struct wl_resource *resour
     struct pool* pool;
     uint32_t memory_id;
     wayvroom_server_t* server;
+    vrms_runtime_t* vrms_runtime;
 
     fprintf(stderr, "shm.c: shm_pool_create()\n");
     if (!(pool = malloc(sizeof(*pool)))) {
@@ -169,10 +170,11 @@ static void shm_pool_create(struct wl_client *client, struct wl_resource *resour
 
     server = wl_resource_get_user_data(resource);
     pool->server = server;
+    vrms_runtime = server->vrms_runtime;
 
     wl_resource_set_implementation(pool->resource, &shm_pool_implementation, pool, &shm_pool_resource_destroy);
 
-    memory_id = vrms_runtime_create_memory(server->vrms_runtime, server->scene_id, fd, size);
+    memory_id = vrms_runtime->interface->create_memory(server->vrms_runtime, server->scene_id, fd, size);
 
     if (memory_id == 0) {
         fprintf(stderr, "shm.c: shm_create_pool() [vrms_runtime_create_memory failed]\n");
