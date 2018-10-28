@@ -179,9 +179,9 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
         y_min = 0.0f - y_max;
     }
     else {
-        x_min = (float)width / (float)height;
+        x_max = (float)width / (float)height;
         y_max = 1.0f;
-        x_min = 0.0f - x_min;
+        x_min = 0.0f - x_max;
         y_min = -1.0f;
     }
 
@@ -263,6 +263,7 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     program = &((uint8_t*)layout->mem)[layout->items[5].memory_offset];
     matrix = &((float*)layout->mem)[layout->items[6].memory_offset];
 
+    fprintf(stderr, "generating plane: (%f,%f) (%f,%f)\n", x_min, y_min, x_max, y_max);
     std_plane_generate_verticies(verts, x_min, y_min, x_max, y_max);
     std_plane_generate_normals(norms);
     std_plane_generate_indicies(indicies);
@@ -294,7 +295,6 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     object->geometry_id = vrms_runtime->interface->create_object_geometry(vrms_runtime, scene_id, layout->items[0].id, layout->items[1].id, layout->items[2].id);
     object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
 
-    fprintf(stderr, "object->mesh_id: %d, layout->items[6].id: %d\n", object->mesh_id, layout->items[6].id);
     registers[0] = object->mesh_id;
     registers[1] = layout->items[6].id;
     registers[2] = 0;
