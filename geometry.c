@@ -28,6 +28,7 @@ typedef struct memory_layout {
     uint32_t id;
     int32_t fd;
     uint8_t* mem;
+    size_t total_size;
     uint32_t nr_items;
     memory_layout_item_t* items;
 } memory_layout_t;
@@ -106,48 +107,43 @@ void std_plane_generate_uvs(float* uvs) {
 }
 
 void geometry_realise_memory(vrms_runtime_t* vrms_runtime, uint32_t scene_id, memory_layout_t* layout) {
-    int32_t fd = -1;
-    int32_t ret;
     uint32_t index;
-    size_t total_size;
-    uint8_t* mem;
     memory_layout_item_t* item;
 
     for (index = 0; index < layout->nr_items; index++) {
         item = &layout->items[index];
-        total_size += item->memory_size;
+        layout->total_size += item->memory_size;
     }
 
-    fd = memfd_create("WAYVROOM surface", MFD_ALLOW_SEALING);
-    if (fd <= 0) {
+    layout->fd = memfd_create("WAYVROOM surface", MFD_ALLOW_SEALING);
+    if (layout->fd <= 0) {
         fprintf(stderr, "unable to create shared memory: %d\n", errno);
         return;
     }
 
-    ret = ftruncate(fd, total_size);
+    int32_t ret = ftruncate(layout->fd, layout->total_size);
     if (-1 == ret) {
-        fprintf(stderr, "unable to truncate memfd to size %zd\n", total_size);
+        fprintf(stderr, "unable to truncate memfd to size %zd\n", layout->total_size);
         return;
     }
 
-    ret = fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK);
+    ret = fcntl(layout->fd, F_ADD_SEALS, F_SEAL_SHRINK);
     if (-1 == ret) {
         fprintf(stderr, "failed to add seals to memfd\n");
         return;
     }
 
-    mem = mmap(NULL, total_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-    if (MAP_FAILED == mem) {
+    layout->mem = mmap(NULL, layout->total_size, PROT_READ|PROT_WRITE, MAP_SHARED, layout->fd, 0);
+    if (MAP_FAILED == layout->mem) {
         fprintf(stderr, "unable to attach address\n");
         return;
     }
 
-    layout->mem = mem;
-    layout->fd = fd;
-    layout->id = vrms_runtime->interface->create_memory(vrms_runtime, scene_id, fd, total_size);
+    layout->id = vrms_runtime->interface->create_memory(vrms_runtime, scene_id, layout->fd, layout->total_size);
 }
 
 void geometry_realise_memory_item(vrms_runtime_t* vrms_runtime, uint32_t scene_id, memory_layout_t* layout, memory_layout_item_t* item) {
+    fprintf(stderr, "realising from offset: %d\n", item->memory_offset);
     item->id = vrms_runtime->interface->create_object_data(vrms_runtime, scene_id, layout->id, item->memory_offset, item->memory_size, item->item_length, item->data_length, item->type);
     item->mem = &layout->mem[item->memory_offset];
 }
@@ -254,14 +250,18 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     item->type = VRMS_MATRIX;
 
     geometry_realise_memory(vrms_runtime, scene_id, layout);
+    if (layout->id == 0) {
+        fprintf(stderr, "unable to realise memory\n");
+        return NULL;
+    }
 
-    verts = &((float*)layout->mem)[layout->items[0].memory_offset];
-    norms = &((float*)layout->mem)[layout->items[1].memory_offset];
-    indicies = &((uint16_t*)layout->mem)[layout->items[2].memory_offset];
-    uvs = &((float*)layout->mem)[layout->items[3].memory_offset];
-    registers = &((uint32_t*)layout->mem)[layout->items[4].memory_offset];
-    program = &((uint8_t*)layout->mem)[layout->items[5].memory_offset];
-    matrix = &((float*)layout->mem)[layout->items[6].memory_offset];
+    verts = ((float*)&layout->mem[layout->items[0].memory_offset]);
+    norms = ((float*)&layout->mem[layout->items[1].memory_offset]);
+    indicies = ((uint16_t*)&layout->mem[layout->items[2].memory_offset]);
+    uvs = ((float*)&layout->mem[layout->items[3].memory_offset]);
+    registers = ((uint32_t*)&layout->mem[layout->items[4].memory_offset]);
+    program = ((uint8_t*)&layout->mem[layout->items[5].memory_offset]);
+    matrix = ((float*)&layout->mem[layout->items[6].memory_offset]);
 
     fprintf(stderr, "generating plane: (%f,%f) (%f,%f)\n", x_min, y_min, x_max, y_max);
     std_plane_generate_verticies(verts, x_min, y_min, x_max, y_max);
@@ -293,7 +293,8 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     memset(object, 0, sizeof(geometry_object_t));
 
     object->geometry_id = vrms_runtime->interface->create_object_geometry(vrms_runtime, scene_id, layout->items[0].id, layout->items[1].id, layout->items[2].id);
-    object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
+    //object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
+    object->mesh_id = vrms_runtime->interface->create_object_mesh_color(vrms_runtime, scene_id, object->geometry_id, 0.0f, 1.0f, 0.0f, 1.0f);
 
     registers[0] = object->mesh_id;
     registers[1] = layout->items[6].id;
