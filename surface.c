@@ -6,27 +6,29 @@
 #include "shm.h"
 #include "surface.h"
 
-#include "geometry.h"
-
 static void surface_destroy(struct wl_client *client, struct wl_resource *resource) {
     fprintf(stderr, "surface.c: surface_destroy()\n");
+    struct surface* surface = wl_resource_get_user_data(resource);
+    wayvroom_server_t* server = surface->server;
+    geometry_object_t* geometry = surface->geometry;
+    vrms_runtime_t* vrms_runtime = server->vrms_runtime;
+
+    geometry_destroy_screen(vrms_runtime, server->scene_id, geometry);
+
     wl_resource_destroy(resource);
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource, struct wl_resource* buffer_resource, int32_t x, int32_t y) {
+    fprintf(stderr, "surface.c: surface_attach()\n");
+
     struct surface* surface = wl_resource_get_user_data(resource);
     buffer_reference_t* reference = wl_resource_get_user_data(buffer_resource);
-    wayvroom_server_t* server;
-    vrms_runtime_t* vrms_runtime;
-    geometry_object_t* object;
+    wayvroom_server_t* server = reference->server;
+    vrms_runtime_t* vrms_runtime = server->vrms_runtime;
 
-    server = reference->server;
-    vrms_runtime = server->vrms_runtime;
+    surface->server = server;
+    surface->geometry = geometry_create_screen(vrms_runtime, server->scene_id, reference->texture_id, reference->width, reference->height);
 
-    object = geometry_create_screen(vrms_runtime, server->scene_id, reference->texture_id, reference->width, reference->height);
-    reference->mesh_id = object->mesh_id;
-
-    fprintf(stderr, "surface.c: surface_attach()\n");
     if (surface->buffer_resource) {
         fprintf(stderr, "surface.c: surface_attach(): buffer_resource already attached\n");
     }
@@ -74,15 +76,26 @@ static struct wl_surface_interface surface_implementation = {
 };
 
 static void surface_resource_destroy(struct wl_resource *resource) {
+    fprintf(stderr, "surface.c: surface_resource_destroy()\n");
     struct surface* surface = wl_resource_get_user_data(resource);
-    fprintf(stderr, "surface.c: surface_destroy()\n");
+    wayvroom_server_t* server = surface->server;
+    if (!server) {
+        free(surface);
+        return;
+    }
+
+    geometry_object_t* geometry = surface->geometry;
+    vrms_runtime_t* vrms_runtime = server->vrms_runtime;
+
+    geometry_destroy_screen(vrms_runtime, server->scene_id, geometry);
+
     free(surface);
 }
 
 struct surface* surface_new(struct wl_client *client, uint32_t version, uint32_t id) {
-    struct surface *surface;
-
     fprintf(stderr, "surface.c: surface_new(id:%d)\n", id);
+
+    struct surface *surface;
     if (!(surface = malloc(sizeof(*surface))))
         return NULL;
 

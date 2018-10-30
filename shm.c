@@ -83,15 +83,15 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
-    uint32_t data_id = vrms_runtime->interface->create_object_data(vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
-    uint32_t texture_id = vrms_runtime->interface->create_object_texture(vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
-
     buffer_reference_t* reference;
     if (!(reference = malloc(sizeof(*reference)))) {
         wl_resource_destroy(buffer_resource);
         wl_resource_post_no_memory(resource);
         return;
     }
+
+    uint32_t data_id = vrms_runtime->interface->create_object_data(vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    uint32_t texture_id = vrms_runtime->interface->create_object_texture(vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
 
     reference->server = server;
     reference->data_id = data_id;

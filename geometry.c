@@ -86,23 +86,26 @@ void std_plane_generate_indicies(uint16_t* indicies) {
     off += 6;
 }
 
+//  2      3
+//
+//  0      1
 void std_plane_generate_uvs(float* uvs) {
     uint32_t off = 0;
 
     uvs[off + 0] = 0.0f;
-    uvs[off + 1] = 0.0f;
+    uvs[off + 1] = 1.0f;
     off += 2;
 
     uvs[off + 0] = 1.0f;
-    uvs[off + 1] = 0.0f;
+    uvs[off + 1] = 1.0f;
     off += 2;
 
     uvs[off + 0] = 0.0f;
-    uvs[off + 1] = 1.0f;
+    uvs[off + 1] = 0.0f;
     off += 2;
 
     uvs[off + 0] = 1.0f;
-    uvs[off + 1] = 1.0f;
+    uvs[off + 1] = 0.0f;
     off += 2;
 }
 
@@ -255,6 +258,10 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
         return NULL;
     }
 
+    object = malloc(sizeof(geometry_object_t));
+    memset(object, 0, sizeof(geometry_object_t));
+    object->memory_id = layout->id;
+
     verts = ((float*)&layout->mem[layout->items[0].memory_offset]);
     norms = ((float*)&layout->mem[layout->items[1].memory_offset]);
     indicies = ((uint16_t*)&layout->mem[layout->items[2].memory_offset]);
@@ -263,7 +270,7 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     program = ((uint8_t*)&layout->mem[layout->items[5].memory_offset]);
     matrix = ((float*)&layout->mem[layout->items[6].memory_offset]);
 
-    fprintf(stderr, "generating plane: (%f,%f) (%f,%f)\n", x_min, y_min, x_max, y_max);
+    fprintf(stderr, "geometry.c: generating plane (%f,%f) (%f,%f)\n", x_min, y_min, x_max, y_max);
     std_plane_generate_verticies(verts, x_min, y_min, x_max, y_max);
     std_plane_generate_normals(norms);
     std_plane_generate_indicies(indicies);
@@ -272,6 +279,11 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[1]);
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[2]);
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[3]);
+
+    object->vertex_id = layout->items[0].id;
+    object->normal_id = layout->items[1].id;
+    object->index_id = layout->items[2].id;
+    object->uv_id = layout->items[3].id;
 
     program[0] = VM_MATLM;
     program[1] = VM_REG0;
@@ -284,13 +296,12 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     program[8] = VM_JMP;
     program[9] = 0x04;
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[5]);
+    object->program_memory_id = layout->items[5].id;
 
     esmLoadIdentity(matrix);
     esmTranslatef(matrix, 0.0f, 0.0f, -4.0f);
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[6]);
-
-    object = malloc(sizeof(geometry_object_t));
-    memset(object, 0, sizeof(geometry_object_t));
+    object->matrix_id = layout->items[6].id;
 
     object->geometry_id = vrms_runtime->interface->create_object_geometry(vrms_runtime, scene_id, layout->items[0].id, layout->items[1].id, layout->items[2].id);
     object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
@@ -304,6 +315,7 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     registers[6] = 0;
     registers[7] = 0;
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[4]);
+    object->register_id = layout->items[6].id;
 
     object->program_id = vrms_runtime->interface->create_program(vrms_runtime, scene_id, layout->items[5].id);
     vrms_runtime->interface->run_program(vrms_runtime, scene_id, object->program_id, layout->items[4].id);
@@ -311,3 +323,19 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     return object;
 }
 
+void geometry_destroy_screen(vrms_runtime_t* vrms_runtime, uint32_t scene_id, geometry_object_t* geometry) {
+    fprintf(stderr, "geometry.c: geometry_destroy_screen()\n");
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->mesh_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->register_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->program_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->program_memory_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->matrix_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->geometry_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->uv_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->index_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->normal_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->vertex_id);
+    vrms_runtime->interface->destroy_object(vrms_runtime, scene_id, geometry->memory_id);
+    close(geometry->fd);
+    free(geometry);
+}
