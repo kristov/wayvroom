@@ -286,15 +286,14 @@ geometry_object_t* geometry_create_screen(vrms_runtime_t* vrms_runtime, uint32_t
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[5]);
 
     esmLoadIdentity(matrix);
-    esmTranslatef(matrix, 0.0f, 0.0f, -10.0f);
+    esmTranslatef(matrix, 0.0f, 0.0f, -4.0f);
     geometry_realise_memory_item(vrms_runtime, scene_id, layout, &layout->items[6]);
 
     object = malloc(sizeof(geometry_object_t));
     memset(object, 0, sizeof(geometry_object_t));
 
     object->geometry_id = vrms_runtime->interface->create_object_geometry(vrms_runtime, scene_id, layout->items[0].id, layout->items[1].id, layout->items[2].id);
-    //object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
-    object->mesh_id = vrms_runtime->interface->create_object_mesh_color(vrms_runtime, scene_id, object->geometry_id, 0.0f, 1.0f, 0.0f, 1.0f);
+    object->mesh_id = vrms_runtime->interface->create_object_mesh_texture(vrms_runtime, scene_id, object->geometry_id, texture_id, layout->items[3].id);
 
     registers[0] = object->mesh_id;
     registers[1] = layout->items[6].id;

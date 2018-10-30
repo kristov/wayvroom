@@ -29,16 +29,6 @@ struct pool {
 
 static void shm_create_buffer(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t offset, int32_t width, int32_t height, int32_t stride, uint32_t wl_format) {
     struct pool* pool = wl_resource_get_user_data(resource);
-    buffer_reference_t* reference;
-    struct wl_resource* buffer_resource;
-    wayvroom_server_t* server;
-    vrms_runtime_t* vrms_runtime;
-    uint32_t data_id;
-    uint32_t texture_id;
-    uint32_t memory_length;
-    uint32_t item_length;
-    uint32_t data_length;
-    vrms_texture_format_t format;
 
     fprintf(stderr, "shm.c: shm_create_buffer(id:%d)\n", id);
     if (offset > pool->size || offset < 0) {
@@ -46,8 +36,8 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
         return;
     }
 
-    server = pool->server;
-    vrms_runtime = server->vrms_runtime;
+    wayvroom_server_t* server = pool->server;
+    vrms_runtime_t* vrms_runtime = server->vrms_runtime;
 
     fprintf(stderr, "shm.c: shm_create_buffer(details):\n");
     fprintf(stderr, "shm.c: pool->size: %d\n", pool->size);
@@ -57,16 +47,29 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
     fprintf(stderr, "shm.c:     stride: %d\n", stride);
     fprintf(stderr, "shm.c:  wl_format: %d\n", wl_format);
 
-    memory_length = height * stride;
-    item_length = stride / width;
-    data_length = item_length / 4;
+    uint32_t memory_length = height * stride;
+    uint32_t item_length = stride / width;
+    uint32_t data_length = item_length / 4;
 
+    vrms_texture_format_t format;
     switch (wl_format) {
+        case WL_SHM_FORMAT_BGR888:
+            format = VRMS_FORMAT_BGR888;
+            break;
+        case WL_SHM_FORMAT_XBGR8888:
+            format = VRMS_FORMAT_XBGR8888;
+            break;
+        case WL_SHM_FORMAT_ABGR8888:
+            format = VRMS_FORMAT_ABGR8888;
+            break;
+        case WL_SHM_FORMAT_RGB888:
+            format = VRMS_FORMAT_RGB888;
+            break;
         case WL_SHM_FORMAT_XRGB8888:
-            format = VRMS_RGB8;
+            format = VRMS_FORMAT_XRGB8888;
             break;
         case WL_SHM_FORMAT_ARGB8888:
-            format = VRMS_RGB8;
+            format = VRMS_FORMAT_ARGB8888;
             break;
         default:
             wl_resource_post_error(resource, WL_SHM_ERROR_INVALID_FORMAT, "only WL_SHM_FORMAT_XRGB8888 supported");
@@ -74,15 +77,16 @@ static void shm_create_buffer(struct wl_client *client, struct wl_resource *reso
             break;
     }
 
-    buffer_resource = wayland_buffer_create_resource(client, wl_resource_get_version(resource), id);
+    struct wl_resource* buffer_resource = wayland_buffer_create_resource(client, wl_resource_get_version(resource), id);
     if (!buffer_resource) {
         wl_resource_post_no_memory(resource);
         return;
     }
 
-    data_id = vrms_runtime->interface->create_object_data(vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
-    texture_id = vrms_runtime->interface->create_object_texture(vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
+    uint32_t data_id = vrms_runtime->interface->create_object_data(vrms_runtime, server->scene_id, pool->memory_id, offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    uint32_t texture_id = vrms_runtime->interface->create_object_texture(vrms_runtime, server->scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
 
+    buffer_reference_t* reference;
     if (!(reference = malloc(sizeof(*reference)))) {
         wl_resource_destroy(buffer_resource);
         wl_resource_post_no_memory(resource);
@@ -148,12 +152,8 @@ static void shm_pool_resource_destroy(struct wl_resource *resource) {
 }
 
 static void shm_pool_create(struct wl_client *client, struct wl_resource *resource, uint32_t id, int32_t fd, int32_t size) {
-    struct pool* pool;
-    uint32_t memory_id;
-    wayvroom_server_t* server;
-    vrms_runtime_t* vrms_runtime;
-
     fprintf(stderr, "shm.c: shm_pool_create()\n");
+    struct pool* pool;
     if (!(pool = malloc(sizeof(*pool)))) {
         wl_resource_post_no_memory(resource);
         close(fd);
@@ -168,13 +168,13 @@ static void shm_pool_create(struct wl_client *client, struct wl_resource *resour
         return;
     }
 
-    server = wl_resource_get_user_data(resource);
+    wayvroom_server_t* server = wl_resource_get_user_data(resource);
     pool->server = server;
-    vrms_runtime = server->vrms_runtime;
+    vrms_runtime_t* vrms_runtime = server->vrms_runtime;
 
     wl_resource_set_implementation(pool->resource, &shm_pool_implementation, pool, &shm_pool_resource_destroy);
 
-    memory_id = vrms_runtime->interface->create_memory(server->vrms_runtime, server->scene_id, fd, size);
+    uint32_t memory_id = vrms_runtime->interface->create_memory(server->vrms_runtime, server->scene_id, fd, size);
 
     if (memory_id == 0) {
         fprintf(stderr, "shm.c: shm_create_pool() [vrms_runtime_create_memory failed]\n");
@@ -209,6 +209,10 @@ static void shm_bind_shm(struct wl_client *client, void *data, uint32_t version,
     resource = wl_resource_create(client, &wl_shm_interface, version, id);
     wl_resource_set_implementation(resource, &shm_implementation, server, NULL);
 
+    wl_shm_send_format(resource, WL_SHM_FORMAT_BGR888);
+    wl_shm_send_format(resource, WL_SHM_FORMAT_XBGR8888);
+    wl_shm_send_format(resource, WL_SHM_FORMAT_ABGR8888);
+    wl_shm_send_format(resource, WL_SHM_FORMAT_RGB888);
     wl_shm_send_format(resource, WL_SHM_FORMAT_XRGB8888);
     wl_shm_send_format(resource, WL_SHM_FORMAT_ARGB8888);
 }
