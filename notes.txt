@@ -1,0 +1,64 @@
+
+shm_bind_shm():
+    Do we create the scene here?
+    No the scene is on the compositor level - one scene for all of wayland
+    struct shm has a scene_id (or struct compositor)
+
+shm_pool_create(fd):
+    vrms_runtime_create_memory(vrms_runtime, scene_id, fd, size);
+
+shm_create_buffer(offset, width, height, stride, format):
+    vrms_runtime_create_object_data(vrms_runtime, scene_id, memory_id, memory_offset, memory_length, item_length, data_length, VRMS_TEXTURE);
+    vrms_runtime_create_object_texture(vrms_runtime, scene_id, data_id, width, height, format, VRMS_TEXTURE_2D);
+
+surface_attach():
+    Get the buffer resource and use that to generate geometry
+    Generate a mesh object and tie the geometry and texture object to it
+    Create a matrix object to set the location (tmp)
+
+surface_commit():
+    Update the render VM to render the mesh at location X
+    TODO: Can the render VM skip needing a mesh and just render geometry and texture
+
+create_surface():
+    No buffer yet, so don't know the size
+
+get_shell_surface():
+    No buffer yet, so don't know the size
+
+
+
+
+shm.c: shm_bind_shm()
+shell.c: bind_shell()
+seat.c: bind_seat()
+seat.c: get_pointer()
+shm.c: shm_create_pool()
+compositor.c: create_surface()
+surface.c: surface_new(id:9)
+shell.c: get_shell_surface()
+shell_surface.c: shell_surface_new(id:[10])
+shell_surface.c: set_toplevel()
+shm.c: shm_create_buffer(id:11)
+shm.c: shm_create_buffer(details):
+shm.c: pool->size: 279600
+shm.c:     offset: 0
+shm.c:      width: 320
+shm.c:     height: 200
+shm.c:     stride: 1280
+shm.c:     format: 0
+wayland_buffer.c: wayland_buffer_create_resource(id:11)
+surface.c: attach()
+surface.c: attach(): buffer_resource already attached
+surface.c: commit()
+compositor.c: create_surface()
+surface.c: surface_new(id:12)
+shm.c: shm_create_buffer(id:13)
+shm.c: shm_create_buffer(details):
+shm.c: pool->size: 279600
+shm.c:     offset: 256000
+shm.c:      width: 100
+shm.c:     height: 59
+shm.c:     stride: 400
+shm.c:     format: 0
+wayland_buffer.c: wayland_buffer_create_resource(id:13)
